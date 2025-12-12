@@ -1,18 +1,21 @@
 # backend/app/services/search_service.py
 
-from embedding_service import EmbeddingService
-from vector_store import VectorStore
+from pipeline import IngestionPipeline
 
 
 class SearchService:
-    def __init__(self, vector_store: VectorStore):
-        self.embedder = EmbeddingService()
-        self.vector_store = vector_store
+    """
+    Thin service layer around the ingestion pipeline.
+    """
 
-    def search(self, query: str, top_k=5):
-        print(f"\n🔍 Searching for: {query}")
+    def __init__(self):
+        # Load pipeline once
+        self.pipeline = IngestionPipeline(base_dir="./sample_code")
 
-        query_vector = self.embedder.embed(query)
-        results = self.vector_store.search(query_vector, top_k=top_k)
+        # Run ingestion ONCE at startup
+        print("🚀 Initializing ingestion pipeline...")
+        self.pipeline.run()
+        print("✅ Ingestion ready.")
 
-        return results
+    def search(self, query: str, top_k: int = 5):
+        return self.pipeline.search(query, top_k)
