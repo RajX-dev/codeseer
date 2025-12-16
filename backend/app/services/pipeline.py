@@ -1,10 +1,11 @@
 # backend/app/services/pipeline.py
 
-from file_scanner import FileScannerService
-from file_loader import FileLoaderService
-from chunker import ChunkerService
-from embedding_service import EmbeddingService
-from vector_store import VectorStore
+from app.services.file_scanner import FileScannerService
+from app.services.file_loader import FileLoaderService
+from app.services.chunker import ChunkerService
+from app.services.embedding_service import EmbeddingService
+from app.services.vector_store import VectorStore
+
 
 
 class IngestionPipeline:
