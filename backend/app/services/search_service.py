@@ -1,6 +1,7 @@
 # backend/app/services/search_service.py
 
-from pipeline import IngestionPipeline
+from app.services.pipeline import IngestionPipeline
+
 
 
 class SearchService:
