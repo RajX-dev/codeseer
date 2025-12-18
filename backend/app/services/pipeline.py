@@ -6,10 +6,13 @@ from app.services.chunker import ChunkerService
 from app.services.embedding_service import EmbeddingService
 from app.services.vector_store import VectorStore
 
+from app.services.metadata_store import MetadataStore
+
 
 
 class IngestionPipeline:
-    def __init__(self, base_dir="../../", dim=384):
+    def __init__(self, base_dir="sample_code", dim=384):
+
         self.base_dir = base_dir
 
         # Day 3 components
@@ -22,6 +25,9 @@ class IngestionPipeline:
 
         # Day 5 component (vector store)
         self.vector_store = VectorStore(dim)
+        # Day 10 component(meta)
+        self.metadata_store = MetadataStore()
+
 
     def run(self):
         """
@@ -52,6 +58,7 @@ class IngestionPipeline:
                 }
 
                 self.vector_store.add(vector, metadata)
+                self.metadata_store.add(metadata)
 
             all_chunks.extend(chunks)
 

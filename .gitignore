@@ -12,3 +12,5 @@ venv/
 
 # OS
 .DS_Store
+#metadata
+backend/data/

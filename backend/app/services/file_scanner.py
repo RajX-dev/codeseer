@@ -1,18 +1,19 @@
 from pathlib import Path
 
-SUPPORTED_EXTENSIONS = {
-    ".py", ".js", ".ts", ".jsx", ".tsx",
-    ".java", ".cpp", ".c", ".cs", ".go",
-    ".md", ".json", ".yaml", ".yml"
-}
 
 class FileScannerService:
-    def __init__(self, root: str):
-        self.root = Path(root)
+    def __init__(self, base_dir: str):
+        # Resolve path relative to backend directory
+        backend_dir = Path(__file__).resolve().parents[2]
+        self.base_dir = backend_dir / base_dir
 
     def scan(self):
+        if not self.base_dir.exists():
+            print(f"⚠️ Scan directory does not exist: {self.base_dir}")
+            return []
+
         files = []
-        for path in self.root.rglob("*"):
-            if path.suffix in SUPPORTED_EXTENSIONS and path.is_file():
-                files.append(path)
+        for ext in ("*.py", "*.js", "*.ts", "*.cpp", "*.java"):
+            files.extend(self.base_dir.rglob(ext))
+
         return files
