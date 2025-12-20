@@ -3,10 +3,10 @@
 from app.services.pipeline import IngestionPipeline
 
 
-
 class SearchService:
     """
     Thin service layer around the ingestion pipeline.
+    Applies file-level aggregation, scoring, ranking, and confidence.
     """
 
     def __init__(self):
@@ -19,12 +19,44 @@ class SearchService:
         print("✅ Ingestion ready.")
 
     def search(self, query: str, top_k: int = 5):
-        raw_results = self.pipeline.search(query, top_k)
+        """
+        Perform semantic search and return file-level ranked results.
+        """
 
-        enriched = []
-        for rank, r in enumerate(raw_results, start=1):
+        # Pull more results first → then collapse to best-per-file
+        raw_results = self.pipeline.search(query, top_k * 3)
+
+        file_best = {}
+
+        for r in raw_results:
             distance = r["distance"]
             score = 1 / (1 + distance)
+
+            meta = r["metadata"]
+            file_path = meta.get("file_path")
+
+            if (
+                file_path not in file_best
+                or score > file_best[file_path]["score"]
+            ):
+                file_best[file_path] = {
+                    "score": score,
+                    "file_path": file_path,
+                    "chunk_index": meta.get("chunk_index"),
+                    "preview": meta.get("preview"),
+                }
+
+        # Sort files by best score
+        sorted_files = sorted(
+            file_best.values(),
+            key=lambda x: x["score"],
+            reverse=True,
+        )
+
+        results = []
+
+        for rank, r in enumerate(sorted_files[:top_k], start=1):
+            score = r["score"]
 
             if score > 0.75:
                 confidence = "high"
@@ -33,15 +65,15 @@ class SearchService:
             else:
                 confidence = "low"
 
-            meta = r["metadata"]
+            results.append(
+                {
+                    "rank": rank,
+                    "score": round(score, 3),
+                    "confidence": confidence,
+                    "file_path": r["file_path"],
+                    "chunk_index": r["chunk_index"],
+                    "preview": r["preview"],
+                }
+            )
 
-            enriched.append({
-                "rank": rank,
-                "score": round(score, 3),
-                "confidence": confidence,
-                "file_path": meta.get("file_path"),
-                "chunk_index": meta.get("chunk_index"),
-                "preview": meta.get("preview"),
-            })
-
-        return enriched
+        return results
