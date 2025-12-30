@@ -1,31 +1,25 @@
-# backend/app/services/search_service.py
-
 from app.services.pipeline import IngestionPipeline
 
 
 class SearchService:
     """
     Thin service layer around the ingestion pipeline.
-    Applies file-level aggregation, scoring, ranking, and confidence.
+    Handles ranking, deduplication, confidence scoring,
+    and optional debug visibility.
     """
 
     def __init__(self):
-        # Load pipeline once
         self.pipeline = IngestionPipeline(base_dir="./sample_code")
 
-        # Run ingestion ONCE at startup
         print("🚀 Initializing ingestion pipeline...")
         self.pipeline.run()
         print("✅ Ingestion ready.")
 
-    def search(self, query: str, top_k: int = 5):
-        """
-        Perform semantic search and return file-level ranked results.
-        """
-
-        # Pull more results first → then collapse to best-per-file
+    def search(self, query: str, top_k: int = 5, debug: bool = False):
+        # Fetch more results to allow fair deduplication
         raw_results = self.pipeline.search(query, top_k * 3)
 
+        # Best match per file (avoid multi-chunk dominance)
         file_best = {}
 
         for r in raw_results:
@@ -41,12 +35,13 @@ class SearchService:
             ):
                 file_best[file_path] = {
                     "score": score,
+                    "distance": distance,
                     "file_path": file_path,
                     "chunk_index": meta.get("chunk_index"),
                     "preview": meta.get("preview"),
                 }
 
-        # Sort files by best score
+        # Sort by semantic relevance
         sorted_files = sorted(
             file_best.values(),
             key=lambda x: x["score"],
@@ -65,15 +60,23 @@ class SearchService:
             else:
                 confidence = "low"
 
-            results.append(
-                {
-                    "rank": rank,
-                    "score": round(score, 3),
-                    "confidence": confidence,
-                    "file_path": r["file_path"],
-                    "chunk_index": r["chunk_index"],
-                    "preview": r["preview"],
+            result = {
+                "rank": rank,
+                "score": round(score, 3),
+                "confidence": confidence,
+                "file_path": r["file_path"],
+                "chunk_index": r["chunk_index"],
+                "preview": r["preview"],
+                "reason": "Semantic similarity between query and code content",
+            }
+
+            if debug:
+                result["debug"] = {
+                    "raw_distance": round(r["distance"], 4),
+                    "normalized_score": round(score, 4),
+                    "chunk_length": len(r["preview"]),
                 }
-            )
+
+            results.append(result)
 
         return results
