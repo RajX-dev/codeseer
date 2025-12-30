@@ -13,8 +13,13 @@ search_service = SearchService()
 class SearchRequest(BaseModel):
     query: str
     top_k: int = 5
+    debug: bool = False
 
 
 @router.post("/")
 def semantic_search(req: SearchRequest):
-    return search_service.search(req.query, req.top_k)
+    return search_service.search(
+        query=req.query,
+        top_k=req.top_k,
+        debug=req.debug,
+    )
