@@ -1,22 +1,15 @@
-# backend/app/routers/search.py
-
+from typing import List
 from fastapi import APIRouter
-from pydantic import BaseModel
+
+from app.models.search import SearchRequest, SearchResult
 from app.services.search_service import SearchService
 
 router = APIRouter(prefix="/search", tags=["search"])
 
-# Create service ONCE
 search_service = SearchService()
 
 
-class SearchRequest(BaseModel):
-    query: str
-    top_k: int = 5
-    debug: bool = False
-
-
-@router.post("/")
+@router.post("/", response_model=List[SearchResult])
 def semantic_search(req: SearchRequest):
     return search_service.search(
         query=req.query,
