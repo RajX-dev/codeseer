@@ -4,8 +4,6 @@ from app.services.pipeline import IngestionPipeline
 class SearchService:
     """
     Thin service layer around the ingestion pipeline.
-    Handles ranking, deduplication, confidence scoring,
-    and optional debug visibility.
     """
 
     def __init__(self):
@@ -16,10 +14,9 @@ class SearchService:
         print("✅ Ingestion ready.")
 
     def search(self, query: str, top_k: int = 5, debug: bool = False):
-        # Fetch more results to allow fair deduplication
+        # Fetch more results internally for better file-level aggregation
         raw_results = self.pipeline.search(query, top_k * 3)
 
-        # Best match per file (avoid multi-chunk dominance)
         file_best = {}
 
         for r in raw_results:
@@ -39,9 +36,9 @@ class SearchService:
                     "file_path": file_path,
                     "chunk_index": meta.get("chunk_index"),
                     "preview": meta.get("preview"),
+                    "reason": "Semantic similarity between query and code content",
                 }
 
-        # Sort by semantic relevance
         sorted_files = sorted(
             file_best.values(),
             key=lambda x: x["score"],
@@ -67,14 +64,13 @@ class SearchService:
                 "file_path": r["file_path"],
                 "chunk_index": r["chunk_index"],
                 "preview": r["preview"],
-                "reason": "Semantic similarity between query and code content",
+                "reason": r["reason"],
             }
 
             if debug:
                 result["debug"] = {
                     "raw_distance": round(r["distance"], 4),
                     "normalized_score": round(score, 4),
-                    "chunk_length": len(r["preview"]),
                 }
 
             results.append(result)
