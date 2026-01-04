@@ -4,16 +4,24 @@ function App() {
   // 1️⃣ State
   const [results, setResults] = useState([]);
   const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(false);
 
   // 2️⃣ Search function
   const runSearch = () => {
+    if (!query.trim()) {
+      alert("Please enter a search query");
+      return;
+    }
+
+    setLoading(true);
+
     fetch("http://localhost:8000/api/v1/search/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        query: query || "test",
+        query,
         top_k: 3,
         debug: false,
       }),
@@ -23,14 +31,15 @@ function App() {
         setResults(data);
       })
       .catch((err) => {
-        console.error("Error:", err);
+        console.error(err);
+      })
+      .finally(() => {
+        setLoading(false);
       });
   };
 
   // 3️⃣ Run once on page load
-  useEffect(() => {
-    runSearch();
-  }, []);
+  useEffect(() => {}, []);
 
   // 4️⃣ UI
   return (
@@ -47,11 +56,13 @@ function App() {
         />
         <button
           onClick={runSearch}
+          disabled={loading}
           style={{ marginLeft: "10px", padding: "8px 12px" }}
         >
-          Search
+          {loading ? "Searching…" : "Search"}
         </button>
       </div>
+      {loading && <p>Searching…</p>}
 
       {results.length === 0 ? (
         <p>No results yet.</p>
