@@ -1,19 +1,48 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
+/* ---------- helpers ---------- */
+const getFileName = (path) => {
+  if (!path) return "";
+  return path.split("\\").pop().split("/").pop();
+};
+
+const clampText = (text, max = 120) => {
+  if (!text) return "";
+  return text.length > max ? text.slice(0, max) + "…" : text;
+};
+
+const confidenceStyle = (confidence) => {
+  switch (confidence) {
+    case "high":
+      return { background: "#16a34a" };
+    case "medium":
+      return { background: "#ca8a04" };
+    default:
+      return { background: "#dc2626" };
+  }
+};
+
+/* ---------- app ---------- */
 function App() {
-  // 1️⃣ State
   const [results, setResults] = useState([]);
   const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // 2️⃣ Search function
   const runSearch = () => {
+    if (!query.trim()) {
+      alert("Please enter a search query");
+      return;
+    }
+
+    setLoading(true);
+
     fetch("http://localhost:8000/api/v1/search/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        query: query || "test",
+        query,
         top_k: 3,
         debug: false,
       }),
@@ -23,16 +52,13 @@ function App() {
         setResults(data);
       })
       .catch((err) => {
-        console.error("Error:", err);
+        console.error(err);
+      })
+      .finally(() => {
+        setLoading(false);
       });
   };
 
-  // 3️⃣ Run once on page load
-  useEffect(() => {
-    runSearch();
-  }, []);
-
-  // 4️⃣ UI
   return (
     <div style={{ padding: "40px", fontFamily: "sans-serif" }}>
       <h1>CodeSeer</h1>
@@ -47,29 +73,52 @@ function App() {
         />
         <button
           onClick={runSearch}
+          disabled={loading}
           style={{ marginLeft: "10px", padding: "8px 12px" }}
         >
-          Search
+          {loading ? "Searching…" : "Search"}
         </button>
       </div>
 
-      {results.length === 0 ? (
-        <p>No results yet.</p>
+      {loading && <p>Searching…</p>}
+
+      {!loading && results.length === 0 ? (
+        <p>No results found. Try a different query.</p>
       ) : (
-        <ul>
+        <ul style={{ listStyle: "none", padding: 0 }}>
           {results.map((item) => (
-            <li key={item.rank} style={{ marginBottom: "20px" }}>
-              <div>
-                <strong>Rank:</strong> {item.rank}
+            <li
+              key={item.rank}
+              style={{
+                marginBottom: "20px",
+                padding: "14px",
+                borderRadius: "8px",
+                background: "#1f2937",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <strong>{getFileName(item.file_path)}</strong>
+                <span
+                  style={{
+                    color: "white",
+                    padding: "2px 8px",
+                    borderRadius: "999px",
+                    fontSize: "12px",
+                    ...confidenceStyle(item.confidence),
+                  }}
+                >
+                  {item.confidence}
+                </span>
               </div>
-              <div>
-                <strong>File:</strong> {item.file_path}
-              </div>
-              <div>
-                <strong>Confidence:</strong> {item.confidence}
-              </div>
-              <div>
-                <strong>Preview:</strong> {item.preview}
+
+              <div
+                style={{
+                  marginTop: "8px",
+                  fontFamily: "monospace",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {clampText(item.preview)}
               </div>
             </li>
           ))}
